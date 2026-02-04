@@ -46,7 +46,7 @@ export default function HeroCarousel({
   if (!hasSlides) {
     return (
       <div
-        className={`aspect-[4/3] rounded-3xl bg-white shadow-sm ring-1 ring-black/5 ${className}`}
+        className={`aspect-4/3 rounded-3xl bg-white shadow-sm ring-1 ring-black/5 ${className}`}
       />
     );
   }

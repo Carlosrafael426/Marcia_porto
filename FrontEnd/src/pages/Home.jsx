@@ -131,7 +131,7 @@ export default function Home({ waLink }) {
             href={waLink}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex rounded-2xl bg-white border-green-500 text-green-500 px-6 py-3 font-semibold text-black shadow-sm hover:opacity-65 transition"
+            className="inline-flex rounded-2xl bg-white border-green-500 text-green-500 px-6 py-3 font-semibold text-black-500 shadow-sm hover:opacity-65 transition"
           >
             Quero encomendar
           </a>
@@ -196,7 +196,7 @@ export default function Home({ waLink }) {
       {/* SOBRE */}
       <section id="sobre" className="mx-auto max-w-6xl px-4 py-14">
         <div className="grid lg:grid-cols-2 gap-10 items-center">
-          <div className="aspect-[4/3] rounded-3xl bg-green-500 shadow-sm ring-1 ring-black/5 overflow-hidden">
+          <div className="aspect-4/3 rounded-3xl bg-green-500 shadow-sm ring-1 ring-black/5 overflow-hidden">
             <img
               src={Marcia}
               alt="Confeitaria"
@@ -229,7 +229,7 @@ export default function Home({ waLink }) {
               href={waLink}
               target="_blank"
               rel="noreferrer"
-              className="rounded-2xl bg-white border-green-500 text-green-500 px-6 py-3 text-center font-semibold text-black shadow-sm hover:opacity-65 transition"
+              className="rounded-2xl bg-white border-green-500 text-green-500 px-6 py-3 text-center font-semibold text-black-500 shadow-sm hover:opacity-65 transition"
             >
               WhatsApp (41) 99919-3582
             </a>
