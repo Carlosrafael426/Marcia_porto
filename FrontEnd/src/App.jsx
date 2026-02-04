@@ -2,7 +2,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import WhatsAppFloat from "./components/WhatsAppFloat";
 import Home from "./pages/Home";
-import './Index.css'
+import './index.css'
 
 export default function App() {
   const waLink = "https://wa.me/5541999193582";
