@@ -1,4 +1,4 @@
-import Logo from "../assets/logo.png";
+import Logo from "../assets/Logo.png";
 
 const links = [
   { href: "#inicio", label: "Início" },
