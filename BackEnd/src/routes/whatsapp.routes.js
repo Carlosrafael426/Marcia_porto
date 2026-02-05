@@ -1,6 +1,9 @@
 const express = require("express");
 const { conversas } = require("../../estado");
-const { startConversation, handleMessage } = require("../services/conversationEngine");
+const {
+  startConversation,
+  handleMessage,
+} = require("../services/conversationEngine");
 const { sendWhatsAppMessage } = require("../services/whatsappCloudApi");
 
 const router = express.Router();
@@ -53,6 +56,12 @@ router.post("/webhook", (req, res) => {
       if (rememberMessageId(message.id)) return;
 
       const from = message.from;
+      let to = from;
+      if (to.startsWith("55") && to.length === 13) {
+        // Remove o 9º dígito se o número tiver 13 caracteres (Ex: 55 11 9 8888 7777)
+        // O WhatsApp Business API prefere o formato de 12 dígitos para contas antigas/testes
+        to = to.slice(0, 4) + to.slice(5);
+      }
 
       // pega texto (se não for texto, envia orientação)
       const text = message.text?.body?.trim();
@@ -61,7 +70,7 @@ router.post("/webhook", (req, res) => {
         await sendWhatsAppMessage({
           phoneNumberId: PHONE_NUMBER_ID,
           accessToken: ACCESS_TOKEN,
-          to: from,
+          to: to,
           text: "Por enquanto eu entendo apenas mensagens de texto 🙂\nMe diga: 1️⃣ Bolo, 2️⃣ Doces ou 3️⃣ Personalizado.",
         });
         return;
@@ -85,7 +94,10 @@ router.post("/webhook", (req, res) => {
 
       // processa fluxo
       const conversa = conversas[from];
-      const { resposta, conversa: conversaAtualizada } = handleMessage(conversa, text);
+      const { resposta, conversa: conversaAtualizada } = handleMessage(
+        conversa,
+        text,
+      );
       conversas[from] = conversaAtualizada;
 
       await sendWhatsAppMessage({
