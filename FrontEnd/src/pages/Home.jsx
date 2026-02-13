@@ -5,6 +5,8 @@ import { categories, products } from "../data/products";
 import HeroCarousel from "../components/HeroCarousel";
 import CarouselModal from "../components/CarouselModal";
 
+// deploy fix
+
 import Marcia from "../assets/img/MP.jpeg";
 import h1 from "../assets/Bolos/bolo_tema_whatsapp_image_2026_01_26_at_15_04_30.jpeg";
 import h2 from "../assets/Bolos/bolo_tema_whatsapp_image_2026_01_26_at_15_38_39_3.jpeg";
