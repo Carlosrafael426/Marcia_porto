@@ -12,22 +12,22 @@ const { startConversation, handleMessage } = require("./bot");
 const PORT = process.env.PORT || 3000;
 
 // 3. Configuração do WhatsApp
-const path = require('path');
+
 
 const client = new Client({
-    // Mudamos o diretório para fora da pasta do OneDrive
-    authStrategy: new LocalAuth({
-        dataPath: path.join(process.env.USERPROFILE, '.wwebjs_auth_marcia') 
-    }),
-    webVersionCache: {
-        type: 'remote',
-        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
-    },
-    puppeteer: {
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    }
-});;
+  authStrategy: new LocalAuth({
+    dataPath: "/var/data/.wwebjs_auth_marcia",
+  }),
+  webVersionCache: {
+    type: "remote",
+    remotePath:
+      "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html",
+  },
+  puppeteer: {
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  },
+});
 
 client.on('qr', (qr) => {
     console.log('\n✅ ESCANEIE ESTE QR CODE COM SEU WHATSAPP:');
@@ -55,7 +55,7 @@ client.on('message', async (msg) => {
     if (!conversas[from]) {
         conversas[from] = startConversation();
         const boasVindas = "Olá! 🍰 Seja bem-vindo(a) à Márcia Porto Cakes.\n\n" + 
-                           "1️⃣ Bolo\n2️⃣ Doces\n3️⃣ Personalizado\n\nResponda com o número ou nome.";
+                           "1️⃣ Bolo\n2️⃣ Doces\n3️⃣ Kit festa\n\nResponda com o número ou nome.";
         return client.sendMessage(from, boasVindas);
     }
 
