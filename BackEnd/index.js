@@ -7,7 +7,7 @@ const qrcode = require('qrcode-terminal');
 const conversas = {}; 
 
 // 2. Importamos a lógica do caminho correto: src -> services -> conversationEngine
-const { startConversation, handleMessage } = require("./src/services/conversationEngine");
+const { startConversation, handleMessage } = require("./bot");
 
 const PORT = process.env.PORT || 3000;
 
@@ -19,6 +19,10 @@ const client = new Client({
     authStrategy: new LocalAuth({
         dataPath: path.join(process.env.USERPROFILE, '.wwebjs_auth_marcia') 
     }),
+    webVersionCache: {
+        type: 'remote',
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
+    },
     puppeteer: {
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -35,6 +39,7 @@ client.on('ready', () => {
 });
 
 client.on('message', async (msg) => {
+    if (msg.from === 'status@broadcast') return;
     // Ignora mensagens de grupos
     if (msg.from.includes('@g.us')) return;
 
@@ -69,4 +74,7 @@ client.initialize();
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Servidor rodando na porta ${PORT}`);
+});
+process.on('uncaughtException', (err) => {
+    console.error('Houve um erro, mas o robô continuará rodando:', err);
 });

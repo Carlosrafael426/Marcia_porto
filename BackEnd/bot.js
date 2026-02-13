@@ -1,3 +1,5 @@
+// bot.js
+
 // ==========================================
 // 1. BANCO DE DADOS COMPLETO
 // ==========================================
@@ -68,12 +70,6 @@ const catalog = {
   kitsFesta: [
     {
       id: 1,
-      nome: "Kit Festa Personalizado",
-      preco: 150.0,
-      descricao: "6 Bolos no palito, 6 Pirulitos, 10 Bombons P, 8 Portas Retratos P",
-    },
-    {
-      id: 2,
       nome: "Kit Festa Personalizado 3D",
       preco: 220.0,
       descricao:
@@ -111,7 +107,7 @@ function buildMenuPrincipal() {
     "2️⃣ Brigadeiros e Doces\n" +
     "3️⃣ Kits Festa\n\n" +
     "Responda com o número.\n" +
-    "_Dica: digite *menu* para reiniciar ou *voltar* para retornar._"
+    "_Comandos: *menu* (reiniciar), *voltar* (passo anterior), *cancelar* (parar pedido)_"
   );
 }
 
@@ -123,7 +119,7 @@ function buildMenuDoces() {
     "3. Brigadeiros Recheados\n" +
     "4. Doces Finos\n" +
     "5. Doces Personalizados\n\n" +
-    "_(Ou digite *voltar*)_"
+    "_(Ou digite *voltar* / *cancelar*)_"
   );
 }
 
@@ -132,30 +128,24 @@ function startConversation() {
     etapa: "MENU_PRINCIPAL",
     historico: [],
     pedido: {},
-    // temporários (para listas)
     tempLista: null,
     tempCategoria: null, // "bolos" | "doces" | "kits"
   };
 }
 
 // ==========================================
-// 3. HELPERS (ROBUSTEZ / VALIDAÇÃO)
+// 3. HELPERS (robustez)
 // ==========================================
 function ensureState(conversa) {
-  if (!conversa || typeof conversa !== "object") conversa = {};
+  if (!conversa || typeof conversa !== "object") conversa = startConversation();
 
-  const base = startConversation();
-
-  conversa.etapa ??= base.etapa;
-  conversa.historico ??= base.historico;
-  conversa.pedido ??= base.pedido;
-
-  // temporários
-  conversa.tempLista ??= base.tempLista;
-  conversa.tempCategoria ??= base.tempCategoria;
-
+  if (!conversa.etapa) conversa.etapa = "MENU_PRINCIPAL";
   if (!Array.isArray(conversa.historico)) conversa.historico = [];
-  if (typeof conversa.pedido !== "object" || conversa.pedido === null) conversa.pedido = {};
+  if (!conversa.pedido || typeof conversa.pedido !== "object")
+    conversa.pedido = {};
+  if (typeof conversa.tempLista === "undefined") conversa.tempLista = null;
+  if (typeof conversa.tempCategoria === "undefined")
+    conversa.tempCategoria = null;
 
   return conversa;
 }
@@ -170,15 +160,13 @@ function goTo(conversa, nextEtapa) {
 }
 
 function fmtBRL(n) {
-  return `R$ ${Number(n).toFixed(2)}`;
+  return "R$ " + Number(n).toFixed(2);
 }
 
 function parseYesNo(lowText) {
-  // evita "assim" cair como "sim"
-  const yes = new Set(["sim", "s", "yes", "y"]);
-  const no = new Set(["nao", "não", "n", "no"]);
-  if (yes.has(lowText)) return true;
-  if (no.has(lowText)) return false;
+  // igualdade exata pra evitar "assim" cair como "sim"
+  if (lowText === "sim" || lowText === "s") return true;
+  if (lowText === "não" || lowText === "nao" || lowText === "n") return false;
   return null;
 }
 
@@ -194,35 +182,30 @@ function parseDateBR(text) {
   if (yyyy !== null && yyyy < 100) yyyy += 2000;
 
   if (mm < 1 || mm > 12) return null;
-  const maxByMonth = { 1: 31, 2: 29, 3: 31, 4: 30, 5: 31, 6: 30, 7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31 };
+  const maxByMonth = {
+    1: 31,
+    2: 29,
+    3: 31,
+    4: 30,
+    5: 31,
+    6: 30,
+    7: 31,
+    8: 31,
+    9: 30,
+    10: 31,
+    11: 30,
+    12: 31,
+  };
   if (dd < 1 || dd > maxByMonth[mm]) return null;
 
   const ddStr = String(dd).padStart(2, "0");
   const mmStr = String(mm).padStart(2, "0");
-  if (yyyy) return `${ddStr}/${mmStr}/${yyyy}`;
-  return `${ddStr}/${mmStr}`;
-}
-
-function parseQty(text, categoria) {
-  const t = String(text || "").trim();
-
-  // bolos: kg
-  if (categoria === "bolos") {
-    const cleaned = t.replace(/\s/g, "").toLowerCase().replace("kg", "");
-    const normalized = cleaned.replace(",", ".");
-    const n = Number(normalized);
-    if (!Number.isFinite(n) || n <= 0) return null;
-    return `${n} kg`;
-  }
-
-  // doces/kits: unidades inteiras
-  const n = parseInt(t, 10);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return `${n} un`;
+  if (yyyy) return ddStr + "/" + mmStr + "/" + yyyy;
+  return ddStr + "/" + mmStr;
 }
 
 // ==========================================
-// 4. RENDERIZAÇÃO (resolve o "voltar" de verdade)
+// 4. RENDERIZAÇÃO (para voltar funcionar direito)
 // ==========================================
 function renderEtapa(conversa) {
   switch (conversa.etapa) {
@@ -234,62 +217,69 @@ function renderEtapa(conversa) {
 
     case "LISTA_BOLOS": {
       let m = "🎂 *Escolha o Bolo:*\n\n";
-      catalog.bolos.forEach((b) => (m += `${b.id}. ${b.nome} - ${fmtBRL(b.preco)}\n`));
-      m += "\n_(Digite o número ou *voltar*)_";
+      catalog.bolos.forEach((b) => {
+        m += b.id + ". " + b.nome + " - " + fmtBRL(b.preco) + "\n";
+      });
+      m += "\n_(Digite o número ou *voltar* / *cancelar*)_";
       return m;
     }
 
     case "LISTA_KITS": {
       let menuKits = "🎈 *Nossos Kits Festa:*\n\n";
       catalog.kitsFesta.forEach((kit) => {
-        menuKits += `${kit.id}. *${kit.nome}* - ${fmtBRL(kit.preco)}\n`;
-        menuKits += `🎁 Conteúdo: ${kit.descricao}\n\n`;
+        menuKits +=
+          kit.id + ". *" + kit.nome + "* - " + fmtBRL(kit.preco) + "\n";
+        menuKits += "🎁 Conteúdo: " + kit.descricao + "\n\n";
       });
-      menuKits += "_(Digite o número ou *voltar*)_";
+      menuKits += "_(Digite o número ou *voltar* / *cancelar*)_";
       return menuKits;
     }
 
     case "LISTA_DOCES_FINAL": {
       const alvo = conversa.tempLista || [];
       let dMsg = "✨ *Escolha o sabor/tipo:*\n\n";
-      alvo.forEach((d) => (dMsg += `${d.id}. ${d.nome} - ${fmtBRL(d.preco)}\n`));
-      dMsg += "\n_(Digite o número ou *voltar*)_";
+      alvo.forEach((d) => {
+        dMsg += d.id + ". " + d.nome + " - " + fmtBRL(d.preco) + "\n";
+      });
+      dMsg += "\n_(Digite o número ou *voltar* / *cancelar*)_";
       return dMsg;
     }
 
     case "MASSA": {
       let maMsg = "🍞 *Escolha a massa:*\n\n";
-      catalog.massas.forEach((m, i) => (maMsg += `${i + 1}. ${m}\n`));
-      maMsg += "\n_(Digite o número ou *voltar*)_";
+      catalog.massas.forEach((m, i) => {
+        maMsg += i + 1 + ". " + m + "\n";
+      });
+      maMsg += "\n_(Digite o número ou *voltar* / *cancelar*)_";
       return maMsg;
     }
 
     case "RECHEIO": {
       let reMsg = "🍫 *Escolha o recheio:*\n\n";
-      catalog.recheios.forEach((r, i) => (reMsg += `${i + 1}. ${r}\n`));
-      reMsg += "\n_(Digite o número ou *voltar*)_";
+      catalog.recheios.forEach((r, i) => {
+        reMsg += i + 1 + ". " + r + "\n";
+      });
+      reMsg += "\n_(Digite o número ou *voltar* / *cancelar*)_";
       return reMsg;
     }
 
     case "ANIVERSARIO":
-      return "É para aniversário? (Sim/Não)\n\n_(Ou digite *voltar*)_";
+      return "É para aniversário? (Sim/Não)\n\n_(Ou digite *voltar* / *cancelar*)_";
 
     case "NOME_NIVER":
-      return "Qual o nome do aniversariante?\n\n_(Ou digite *voltar*)_";
+      return "Qual o nome do aniversariante?\n\n_(Ou digite *voltar* / *cancelar*)_";
 
     case "IDADE_NIVER":
-      return "Qual a idade?\n\n_(Ou digite *voltar*)_";
+      return "Qual a idade?\n\n_(Ou digite *voltar* / *cancelar*)_";
 
     case "TEMA":
-      return "Qual o tema ou observação? (Diga 'sem tema' se não tiver)\n\n_(Ou digite *voltar*)_";
+      return "Qual o tema ou observação? (Diga 'sem tema' se não tiver)\n\n_(Ou digite *voltar* / *cancelar*)_";
 
     case "DATA":
-      return "Para qual data você precisa? (ex: 15/04 ou 15/04/2026)\n\n_(Ou digite *voltar*)_";
+      return "Para qual data você precisa? (ex: 15/04 ou 15/04/2026)\n\n_(Ou digite *voltar* / *cancelar*)_";
 
     case "QUANTIDADE":
-      return conversa.tempCategoria === "bolos"
-        ? "Qual a quantidade ou tamanho? (ex: 2kg)\n\n_(Ou digite *voltar*)_"
-        : "Qual a quantidade? (ex: 50 unidades)\n\n_(Ou digite *voltar*)_";
+      return "Qual a quantidade ou tamanho? (ex: 2kg ou 50 unidades)\n\n_(Ou digite *voltar* / *cancelar*)_";
 
     default:
       conversa.etapa = "MENU_PRINCIPAL";
@@ -306,26 +296,44 @@ function handleMessage(conversa, msg) {
   const text = String(msg || "").trim();
   const lowText = text.toLowerCase().trim();
 
-  // útil para re-render interno
-  if (!text) return { resposta: renderEtapa(conversa), conversa };
-
-  // comandos globais
+  // ------------------------------------------
+  // COMANDOS GLOBAIS (funcionam em qualquer etapa)
+  // ------------------------------------------
   if (lowText === "reiniciar" || lowText === "menu") {
     reset(conversa);
     return { resposta: renderEtapa(conversa), conversa };
   }
 
+  if (
+    lowText === "cancelar" ||
+    lowText === "cancela" ||
+    lowText === "cancel" ||
+    lowText === "sair" ||
+    lowText === "parar"
+  ) {
+    reset(conversa);
+    return {
+      resposta: "❌ Pedido cancelado.\n\n" + renderEtapa(conversa),
+      conversa,
+    };
+  }
+
   if (lowText === "voltar") {
     if (conversa.historico.length === 0) {
-      return { resposta: "Você já está no começo 🙂\n\n" + renderEtapa(conversa), conversa };
+      return {
+        resposta: "Você já está no começo 🙂\n\n" + renderEtapa(conversa),
+        conversa,
+      };
     }
     conversa.etapa = conversa.historico.pop();
-    // volta e já mostra a tela correta
     return { resposta: "🔄 Voltamos!\n\n" + renderEtapa(conversa), conversa };
   }
 
+  // ------------------------------------------
+  // FLUXO POR ETAPAS
+  // ------------------------------------------
   switch (conversa.etapa) {
-    case "MENU_PRINCIPAL": {
+    case "MENU_PRINCIPAL":
       if (text === "1") {
         conversa.tempCategoria = "bolos";
         goTo(conversa, "LISTA_BOLOS");
@@ -345,8 +353,11 @@ function handleMessage(conversa, msg) {
         return { resposta: renderEtapa(conversa), conversa };
       }
 
-      return { resposta: "Opção inválida. Escolha 1, 2 ou 3.\n\n" + renderEtapa(conversa), conversa };
-    }
+      return {
+        resposta:
+          "Opção inválida. Escolha 1, 2 ou 3.\n\n" + renderEtapa(conversa),
+        conversa,
+      };
 
     case "MENU_DOCES": {
       let alvo = null;
@@ -369,7 +380,11 @@ function handleMessage(conversa, msg) {
         categoriaLabel = "Doces Personalizados";
       }
 
-      if (!alvo) return { resposta: "Escolha de 1 a 5 ou *voltar*.\n\n" + renderEtapa(conversa), conversa };
+      if (!alvo)
+        return {
+          resposta: "Escolha de 1 a 5 ou *voltar*.\n\n" + renderEtapa(conversa),
+          conversa,
+        };
 
       conversa.tempLista = alvo;
       conversa.pedido.categoria = categoriaLabel;
@@ -380,7 +395,11 @@ function handleMessage(conversa, msg) {
 
     case "LISTA_BOLOS": {
       const bolo = catalog.bolos.find((b) => String(b.id) === text);
-      if (!bolo) return { resposta: "Número não encontrado.\n\n" + renderEtapa(conversa), conversa };
+      if (!bolo)
+        return {
+          resposta: "Número não encontrado.\n\n" + renderEtapa(conversa),
+          conversa,
+        };
 
       conversa.pedido.item = bolo.nome;
       conversa.pedido.categoria = "Bolo";
@@ -394,13 +413,18 @@ function handleMessage(conversa, msg) {
     case "LISTA_KITS": {
       const listaBusca = conversa.tempLista || [];
       const selecionado = listaBusca.find((i) => String(i.id) === text);
-      if (!selecionado) return { resposta: "Número inválido. Tente novamente.\n\n" + renderEtapa(conversa), conversa };
+      if (!selecionado)
+        return {
+          resposta:
+            "Número inválido. Tente novamente.\n\n" + renderEtapa(conversa),
+          conversa,
+        };
 
       conversa.pedido.item = selecionado.nome;
       conversa.pedido.precoBase = selecionado.preco;
       conversa.pedido.descricaoKit = selecionado.descricao || null;
 
-      // após selecionar, pode limpar lista temporária
+      // limpa lista temporária depois de escolher
       conversa.tempLista = null;
 
       goTo(conversa, "ANIVERSARIO");
@@ -409,7 +433,11 @@ function handleMessage(conversa, msg) {
 
     case "MASSA": {
       const idxM = parseInt(text, 10) - 1;
-      if (!catalog.massas[idxM]) return { resposta: "Selecione uma massa da lista.\n\n" + renderEtapa(conversa), conversa };
+      if (!catalog.massas[idxM])
+        return {
+          resposta: "Selecione uma massa da lista.\n\n" + renderEtapa(conversa),
+          conversa,
+        };
 
       conversa.pedido.massa = catalog.massas[idxM];
 
@@ -419,7 +447,12 @@ function handleMessage(conversa, msg) {
 
     case "RECHEIO": {
       const idxR = parseInt(text, 10) - 1;
-      if (!catalog.recheios[idxR]) return { resposta: "Selecione um recheio da lista.\n\n" + renderEtapa(conversa), conversa };
+      if (!catalog.recheios[idxR])
+        return {
+          resposta:
+            "Selecione um recheio da lista.\n\n" + renderEtapa(conversa),
+          conversa,
+        };
 
       conversa.pedido.recheio = catalog.recheios[idxR];
 
@@ -429,9 +462,11 @@ function handleMessage(conversa, msg) {
 
     case "ANIVERSARIO": {
       const yn = parseYesNo(lowText);
-      if (yn === null) {
-        return { resposta: "Responda apenas *Sim* ou *Não*.\n\n" + renderEtapa(conversa), conversa };
-      }
+      if (yn === null)
+        return {
+          resposta: "Responda apenas Sim ou Não.\n\n" + renderEtapa(conversa),
+          conversa,
+        };
 
       conversa.pedido.niver = yn;
 
@@ -444,32 +479,41 @@ function handleMessage(conversa, msg) {
       return { resposta: renderEtapa(conversa), conversa };
     }
 
-    case "NOME_NIVER": {
+    case "NOME_NIVER":
       conversa.pedido.nomeNiver = text;
       goTo(conversa, "IDADE_NIVER");
       return { resposta: renderEtapa(conversa), conversa };
-    }
 
     case "IDADE_NIVER": {
       const idade = parseInt(text, 10);
       if (!Number.isFinite(idade) || idade <= 0 || idade > 120) {
-        return { resposta: "Digite uma idade válida (ex: 5, 18, 30).\n\n" + renderEtapa(conversa), conversa };
+        return {
+          resposta:
+            "Digite uma idade válida (ex: 5, 18, 30).\n\n" +
+            renderEtapa(conversa),
+          conversa,
+        };
       }
-      conversa.pedido.idadeNiver = idade;
 
+      conversa.pedido.idadeNiver = idade;
       goTo(conversa, "TEMA");
       return { resposta: renderEtapa(conversa), conversa };
     }
 
-    case "TEMA": {
+    case "TEMA":
       conversa.pedido.tema = text || "sem tema";
       goTo(conversa, "DATA");
       return { resposta: renderEtapa(conversa), conversa };
-    }
 
     case "DATA": {
       const d = parseDateBR(text);
-      if (!d) return { resposta: "Data inválida. Use *dd/mm* ou *dd/mm/aaaa*.\n\n" + renderEtapa(conversa), conversa };
+      if (!d)
+        return {
+          resposta:
+            "Data inválida. Use dd/mm ou dd/mm/aaaa.\n\n" +
+            renderEtapa(conversa),
+          conversa,
+        };
 
       conversa.pedido.data = d;
       goTo(conversa, "QUANTIDADE");
@@ -477,29 +521,31 @@ function handleMessage(conversa, msg) {
     }
 
     case "QUANTIDADE": {
-      const qtd = parseQty(text, conversa.tempCategoria === "bolos" ? "bolos" : "outros");
-      if (!qtd) return { resposta: "Quantidade inválida.\n\n" + renderEtapa(conversa), conversa };
-
-      conversa.pedido.quantidade = qtd;
+      conversa.pedido.quantidade = text;
 
       const p = conversa.pedido;
       let resumo = `📝 *RESUMO DO PEDIDO*\n\n`;
       resumo += `✅ Item: ${p.item}\n`;
-      if (typeof p.precoBase === "number") resumo += `💰 Preço base: ${fmtBRL(p.precoBase)}\n`;
+      if (typeof p.precoBase === "number")
+        resumo += `💰 Preço base: ${fmtBRL(p.precoBase)}\n`;
       if (p.descricaoKit) resumo += `📦 Inclui: ${p.descricaoKit}\n`;
       if (p.massa) resumo += `🍞 Massa: ${p.massa}\n🍫 Recheio: ${p.recheio}\n`;
       resumo += `📅 Data: ${p.data}\n⚖️ Qtd: ${p.quantidade}\n🎨 Tema: ${p.tema}\n`;
-      if (p.niver) resumo += `🎂 Niver: ${p.nomeNiver} (${p.idadeNiver} anos)\n`;
-      resumo += `\n_Em breve a Márcia entrará em contato!_`;
-
-      // opcional: encerra fluxo e volta pro menu ao próximo "oi"
-      conversa.etapa = "MENU_PRINCIPAL";
+      if (p.niver)
+        resumo += `🎂 Niver: ${p.nomeNiver} (${p.idadeNiver} anos)\n`;
+      resumo +=
+        `\n_Em breve a Márcia entrará em contato!_\n\n` +
+        `📲 *Instagram*: https://www.instagram.com/mportobolos/\n` +
+        `🌐 *Site*: https://marciaportocakes.com.br/`;
 
       return { resposta: resumo, conversa };
     }
 
     default:
-      return { resposta: "Digite *menu* para recomeçar.\n\n" + buildMenuPrincipal(), conversa };
+      return {
+        resposta: "Digite *menu* para recomeçar.\n\n" + buildMenuPrincipal(),
+        conversa,
+      };
   }
 }
 
