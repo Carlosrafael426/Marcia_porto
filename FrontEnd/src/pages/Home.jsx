@@ -7,7 +7,7 @@ import CarouselModal from "../components/CarouselModal";
 
 // deploy fix
 
-import Marcia from "../assets/img/MP.jpeg";
+import Marcia from "../assets/mp.jpeg";
 import h1 from "../assets/Bolos/bolo_tema_whatsapp_image_2026_01_26_at_15_04_30.jpeg";
 import h2 from "../assets/Bolos/bolo_tema_whatsapp_image_2026_01_26_at_15_38_39_3.jpeg";
 import h3 from "../assets/Bolos/bolo_tema_whatsapp_image_2026_01_26_at_15_43_17_2.jpeg";
