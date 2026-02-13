@@ -18,16 +18,17 @@ const client = new Client({
   authStrategy: new LocalAuth({
     dataPath: "/var/data/.wwebjs_auth_marcia",
   }),
-  webVersionCache: {
-    type: "remote",
-    remotePath:
-      "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html",
-  },
   puppeteer: {
     headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+    ],
   },
 });
+
 
 client.on('qr', (qr) => {
     console.log('\n✅ ESCANEIE ESTE QR CODE COM SEU WHATSAPP:');
