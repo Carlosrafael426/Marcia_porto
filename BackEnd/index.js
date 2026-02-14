@@ -16,18 +16,25 @@ const PORT = process.env.PORT || 3000;
 
 const client = new Client({
   authStrategy: new LocalAuth({
+    clientId: "marcia-bot",
     dataPath: "/var/data/.wwebjs_auth_marcia",
   }),
   puppeteer: {
     headless: true,
+    // ✅ perfil separado e persistente
+    userDataDir: "/var/data/chrome-profile",
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
+      "--no-first-run",
+      "--no-zygote",
+      "--single-process",
     ],
   },
 });
+
 
 
 client.on('qr', (qr) => {
@@ -70,6 +77,18 @@ client.on('message', async (msg) => {
         console.error("Erro no processamento:", error);
     }
 });
+
+const fs = require("fs");
+
+function safeUnlink(p) {
+  try { fs.unlinkSync(p); } catch (_) {}
+}
+
+// remove locks que travam o Chrome após restart
+safeUnlink("/var/data/chrome-profile/SingletonLock");
+safeUnlink("/var/data/chrome-profile/SingletonCookie");
+safeUnlink("/var/data/chrome-profile/SingletonSocket");
+
 
 client.initialize();
 
